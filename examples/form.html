@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="../src/Atto.js"></script>
+        <script src="js/form.js"></script>
+        <link rel="stylesheet" type="text/css" href="css/form.css">
+    </head>
+    <body>
+        <div class="name js-name"></div>
+        <test-form></test-form>
+    </body>
+    <script>
+        Atto.run();
+        qs = document.location.search.split("+").join(" ");
+
+        var params = {},
+            name = 'Welcome ',
+            tokens,
+            re = /[?&]?([^=]+)=([^&]*)/g;
+
+        while (tokens = re.exec(qs)) {
+            params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
+        }
+        // console.log(params);
+        if (('first-name' in params) && ('last-name' in params)) {
+            name += params['first-name'] + ' ' + params['last-name'];
+        } else {
+            name += 'Anonymous';
+        }
+        
+        document.getElementsByClassName('js-name')[0].innerHTML = name;
+    </script>
+</html>

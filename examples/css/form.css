@@ -1,0 +1,29 @@
+body {
+    width: 80%;
+    margin: auto;
+}
+
+.test-from {
+    width: 50%;
+    margin: auto;
+}
+
+.test-from input {
+    width: 100%;
+    font-size: 110%;
+    margin-top: 0.5em;
+}
+
+.test-from button {
+    display: block;
+    font-size: 120%;
+    float: right;
+    margin: 0.5em 0px 0 0;
+    width: 40%;
+}
+
+.name {
+    font-size: 150%;
+    text-align: center;
+    margin-top: 10%;
+}
