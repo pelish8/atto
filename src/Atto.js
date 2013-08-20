@@ -19,13 +19,13 @@ var Atto = (function () {
     }
     
     function extend (obj1, obj2) {
-        var returnObject = {}, prop;
-        for (prop in obj2) {
+        var returnObject = {};
+        for (var prop in obj2) {
             if (obj2.hasOwnProperty(prop)) {
                 returnObject[prop] = obj2[prop];
             }
         }
-        for (prop in obj1) {
+        for (var prop in obj1) {
             if (obj1.hasOwnProperty(prop)) {
                 returnObject[prop] = obj1[prop];
             }
@@ -55,7 +55,7 @@ var Atto = (function () {
     
     function attoNode (element, config, thisObj) {
         this.element = element || [];
-        if ('extend' in config) {
+        if (config.hasOwnProperty('extend')) {
             this.parent = attoMap[config.extend];
             this.config = extend(config, this.parent);
         } else {
@@ -72,11 +72,12 @@ var Atto = (function () {
             attributes = this.attributes,
             activeElement,
             template = renderAttoElement.call(this, renderer);
+
         if (typeof template === 'undefined') {
             throw new attoException('Render method must be implemented and should return value.');
             // render must be implement and return value
         } else if (template.isFragment &&
-            ('setAttribute' in template.childNodes[0])) {
+            (template.childNodes[0].hasOwnProperty('setAttribute'))) {
             activeElement = template.childNodes[0];
         } else {
             activeElement = template;
@@ -110,13 +111,13 @@ var Atto = (function () {
     };
     
     attoNode.prototype.removeAttribute = function (name) {
-        if (name in this.attributes) {
+        if (this.attributes.hasOwnProperty(name)) {
             delete this.attributes[name];
         }
     };
     
     attoNode.prototype.get = function (name) {
-        if (name in attoMap) {
+        if (attoMap.hasOwnProperty(name)) {
             return new attoNode(undefined, attoMap[name], this);
         }
         return null;
@@ -124,8 +125,8 @@ var Atto = (function () {
 
     m = {
        define: function (config) {
-           if ('name' in config) {
-               if ('extend' in config) {
+           if (config.hasOwnProperty('name')) {
+               if (config.hasOwnProperty('extend')) {
                    var ext = attoMap[config.extend];
                    if (!ext) {
                        throw new attoException('Cannot extend, unknown component "' + 
@@ -145,23 +146,28 @@ var Atto = (function () {
                elements,
                element,
                i = 0,
-               prop;
+               body = document.body,
+               newBody = document.createElement('body');
 
-           for (prop in map) {
-               if (map.hasOwnProperty(prop)) {
-                   config = map[prop];
-                   elements = document.getElementsByTagName(config.name);
-               
-                   for(; i < elements.length;) {
-                       element = elements[i];
-                       var el = new attoNode(element, config, this);
-                       el.render(true);
-                   }
-               }
-           }
+            newBody.innerHTML = body.innerHTML;
+            
+            forEach.call(body.attributes, function (att) {
+                newBody.setAttribute(att.name, att.value);
+            });
+            
+            for (var prop in map) {
+                if (map.hasOwnProperty(prop)) {
+                    config = map[prop];
+                    elements = newBody.getElementsByTagName(config.name);
+                    for (; i < elements.length;) {
+                        new attoNode(elements[i], config, this).render(true);
+                    }
+                }
+            }
+           body.parentNode.replaceChild(newBody, body);
        },
        create: function (config) {
-           if ('extend' in config) {
+           if (config.hasOwnProperty('extend')) {
                return new attoNode(undefined, extend(config, attoMap[config.extend]), this);
            }
            return new attoNode(undefined, config, this);
@@ -169,4 +175,4 @@ var Atto = (function () {
     }
     
     return m;
-})();
+}());
