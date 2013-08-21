@@ -1,24 +1,23 @@
 if (!String.prototype.trim) {
-  String.prototype.trim = function () {
-    return this.replace(/^\s+|\s+$/g, '');
-  };
+    String.prototype.trim = function () {
+        return this.replace(/^\s+|\s+$/g, '');
+    };
 }
 var Atto = (function () {
     'use strict';
-    var attoMap = {}, m,
-    emptyArray = [],
-    forEach = emptyArray.forEach,
-    slice = emptyArray.slice;
+    var attoMap = {}, atto,
+        emptyArray = [],
+        slice = emptyArray.slice;
     
-    function attoException (message) {
+    function AttoException(message) {
         this.message = message;
         this.name = 'methodNotDefined';
-        this.toString = function() {
+        this.toString = function () {
             return this.message;
-       };
+        };
     }
     
-    function extend (obj1, obj2) {
+    function extend(obj1, obj2) {
         var returnObject = {};
         for (var prop in obj2) {
             if (obj2.hasOwnProperty(prop)) {
@@ -34,18 +33,20 @@ var Atto = (function () {
         return returnObject;
     }
     
-    function renderAttoElement (render) {
+    function renderAttoElement(render) {
         if (typeof render === 'string') {
             
             var div = document.createElement('div'),
                 fragmet = document.createDocumentFragment(),
                 childNodes = div.childNodes;
+                i, 
+                len = childNodes.length;
             div.innerHTML = render.trim();
             
             // add node list in to fragemt
-            forEach.call(childNodes, function (item) {
-                fragmet.appendChild(item);
-            });
+            for (i = 0; i < len; i++) {
+                fragmet.appendChild(childNodes[i]);
+            } 
             // flag to know it is a fragment
             fragmet.isFragment = true;
             return fragmet;
@@ -53,7 +54,7 @@ var Atto = (function () {
         return render;
     };
     
-    function attoNode (element, config, thisObj) {
+    function AttoNode(element, config, thisObj) {
         this.element = element || [];
         if (config.hasOwnProperty('extend')) {
             this.parent = attoMap[config.extend];
@@ -67,69 +68,68 @@ var Atto = (function () {
         this.id = config.id;
     };
     
-    attoNode.prototype.render = function (inDom) {
-        var renderer = this.config.render.apply(this, [this.config, this]),
-            attributes = this.attributes,
-            activeElement,
-            template = renderAttoElement.call(this, renderer);
+    AttoNode.prototype = {
+        render: function AttoNode_render(inDom) {
+            var renderer = this.config.render.apply(this, [this.config, this]),
+                attributes = this.attributes,
+                activeElement,
+                template = renderAttoElement.call(this, renderer);
 
-        if (typeof template === 'undefined') {
-            throw new attoException('Render method must be implemented and should return value.');
-            // render must be implement and return value
-        } else if (template.isFragment &&
-            (template.childNodes[0].hasOwnProperty('setAttribute'))) {
-            activeElement = template.childNodes[0];
-        } else {
-            activeElement = template;
-        }
-    
-        for (var att in attributes) {
-            if (attributes.hasOwnProperty(att)) {
-                activeElement.setAttribute(att, attributes[att]);
+            if (typeof template === 'undefined') {
+                throw new AttoException('Render method must be implemented and should return value.');
+                // render must be implement and return value
+            } else if (template.isFragment &&
+                (template.childNodes[0].hasOwnProperty('setAttribute'))) {
+                activeElement = template.childNodes[0];
+            } else {
+                activeElement = template;
             }
+        
+            for (var att in attributes) {
+                if (attributes.hasOwnProperty(att)) {
+                    activeElement.setAttribute(att, attributes[att]);
+                }
+            }
+            this.template = template;
+            if (this.class) {
+                this.template.className += ' ' + this.class;
+            }
+            if (this.id) {
+                this.template.id = this.id;
+            }
+            // put new element in dom
+            if (inDom) {
+                this.insert();
+            }
+            return template;
+        },
+        
+        insert: function AttoNode_insert() {
+            this.element.parentNode.replaceChild(this.template, this.element);
+        },
+        setAttribute: function AttoNode_setattribute(name, value) {
+            this.attributes[name] = value;
+        },
+        removeAttribute: function AttoNode_removeAttribute(name) {
+            if (this.attributes.hasOwnProperty(name)) {
+                delete this.attributes[name];
+            }
+        },
+        get: function AttoNode_get(name) {
+            if (attoMap.hasOwnProperty(name)) {
+                return new AttoNode(undefined, attoMap[name], this);
+            }
+            return null;
         }
-        this.template = template;
-        if (this.class) {
-            this.template.className += ' ' + this.class;
-        }
-        if (this.id) {
-            this.template.id = this.id;
-        }
-        // put new element in dom
-        if (inDom) {
-            this.insert();
-        }
-        return template;
-    };
-    
-    attoNode.prototype.insert = function () {
-        this.element.parentNode.replaceChild(this.template, this.element);
-    };
-    
-    attoNode.prototype.setAttribute = function (name, value) {
-        this.attributes[name] = value;
-    };
-    
-    attoNode.prototype.removeAttribute = function (name) {
-        if (this.attributes.hasOwnProperty(name)) {
-            delete this.attributes[name];
-        }
-    };
-    
-    attoNode.prototype.get = function (name) {
-        if (attoMap.hasOwnProperty(name)) {
-            return new attoNode(undefined, attoMap[name], this);
-        }
-        return null;
     };
 
-    m = {
-       define: function (config) {
+    atto = {
+       define: function atto_define(config) {
            if (config.hasOwnProperty('name')) {
                if (config.hasOwnProperty('extend')) {
                    var ext = attoMap[config.extend];
                    if (!ext) {
-                       throw new attoException('Cannot extend, unknown component "' + 
+                       throw new AttoException('Cannot extend, unknown component "' + 
                        config.extend + '".');
                    }
                    attoMap[config.name] = extend(config, ext);
@@ -137,42 +137,44 @@ var Atto = (function () {
                    attoMap[config.name] = config;
                }
            } else {
-               throw new attoException('Name configuration property must be defined.');
+               throw new AttoException('Name configuration property must be defined.');
            }
        },
-       run: function () {
+       run: function atto_run() {
            var config,
                map = attoMap,
                elements,
                element,
-               i = 0,
+               i,
                body = document.body,
-               newBody = document.createElement('body');
+               newBody = document.createElement('body'),
+               attributes = body.attributes,
+               len;
 
             newBody.innerHTML = body.innerHTML;
-            
-            forEach.call(body.attributes, function (att) {
-                newBody.setAttribute(att.name, att.value);
-            });
+            len = attributes.length;
+            for (i = 0; i < len; i++) {
+                newBody.setAttribute(attributes[i].name, attributes[i].value);
+            }
             
             for (var prop in map) {
                 if (map.hasOwnProperty(prop)) {
                     config = map[prop];
                     elements = newBody.getElementsByTagName(config.name);
-                    for (; i < elements.length;) {
-                        new attoNode(elements[i], config, this).render(true);
+                    for (; 0 < elements.length;) {
+                        new AttoNode(elements[0], config, this).render(true);
                     }
                 }
             }
            body.parentNode.replaceChild(newBody, body);
        },
-       create: function (config) {
+       create: function atto_create(config) {
            if (config.hasOwnProperty('extend')) {
-               return new attoNode(undefined, extend(config, attoMap[config.extend]), this);
+               return new AttoNode(undefined, extend(config, attoMap[config.extend]), this);
            }
-           return new attoNode(undefined, config, this);
+           return new AttoNode(undefined, config, this);
        }
     }
     
-    return m;
+    return atto;
 }());
