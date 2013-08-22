@@ -6,7 +6,7 @@ if (!String.prototype.trim) {
 /******************************************************************************/
 /********************************* Atto class *********************************/
 /******************************************************************************/
-var Atto = (function () {
+var Atto = (function AttoClosure() {
     'use strict';
     var attoMap = {},
         emptyArray = [],
@@ -88,17 +88,28 @@ var Atto = (function () {
     /****************************** constructor *******************************/
     /**************************************************************************/
     function Atto(element, name, configObject, thisObj) {
-        var config = attoMap[name] || configObject || {};
-        this.element = element || [];
-        // this.AttoFromConfig(config, thisObj);
-        if (config.hasOwnProperty('extend')) {
+        var config,
+            len, i, 
+            props = {}, attributes;
+            
+        config = attoMap[name] || configObject || {};
+        element = element || [];
+
+        if (!config.isExtened && config.hasOwnProperty('extend')) {
             this.parent = attoMap[config.extend];
             this.config = extend(config, this.parent);
         } else {
             this.config = config;
         }
-        // this.scope = thisObj || null;
-        // this.props = slice.call(this.element.attributes || [], 0);
+        if (element.hasOwnProperty('attributes')) {
+            attributes = element.attributes;
+            len = attributes.length;
+            for (i = 0; i < len; i++) {
+                props[attributes[i].name] = attributes[i].value;
+            }
+        }
+        this.props = props;
+        this.element = element
         this.class = config.class;
         this.id = config.id;            
         
@@ -117,7 +128,9 @@ var Atto = (function () {
                 template = renderAttoElement.call(this, renderer);
 
             if (typeof template === 'undefined') {
-                throw new AttoException('Render method must be implemented and should return value.');
+                throw new AttoException(
+                    'Render method must be implemented and should return value.'
+                );
                 // render must be implement and return value
             } else if (template.isFragment &&
                 (template.childNodes[0].hasOwnProperty('setAttribute'))) {
@@ -135,7 +148,8 @@ var Atto = (function () {
             if (this.class) {
                 activeElement.className += ' ' + (this.class || '') + 
                 (this.config.name ?
-                     ' ' + constants.ATTO_SELECTOR_CLASS_PREFIX + this.config.name
+                     ' ' + 
+                     constants.ATTO_SELECTOR_CLASS_PREFIX + this.config.name
                      : '');
             }
             if (this.id) {
@@ -165,6 +179,19 @@ var Atto = (function () {
                 return new Atto(undefined, name, this);
             }
             return null;
+        },
+        observer: function Atto_event(name, callBack) {
+            console.log('RRRRR');
+            AttoNotification.observer(name, callBack, this);
+        },
+        post: function Atto_post(name, mixin) {
+            console.log('EEEEEEEE');
+            AttoNotification.post(name, mixin);
+        },
+        rerender: function Atto_rerender() {
+            console.log(this);
+            this.element = this.template;
+            this.render(true);
         }
     };
 
@@ -176,15 +203,20 @@ var Atto = (function () {
            if (config.hasOwnProperty('extend')) {
                var ext = attoMap[config.extend];
                if (!ext) {
-                   throw new AttoException('Cannot extend, unknown component "' + 
-                   config.extend + '".');
+                   throw new AttoException(
+                       'Cannot extend, unknown component "' + config.extend + 
+                       '".'
+                   );
                }
                attoMap[config.name] = extend(config, ext);
+               attoMap[config.name].isExtend = true;
            } else {
                attoMap[config.name] = config;
            }
         } else {
-           throw new AttoException('Name configuration property must be defined.');
+           throw new AttoException(
+               'Name configuration property must be defined.'
+           );
         }
     };
     Atto.run = function Atto_run(settings) {
@@ -208,13 +240,92 @@ var Atto = (function () {
         return new Atto(undefined, null, config, this);
     };
     
-    Atto.get = function Atto_get(name, scope) {
-        var elements;
-        scope = scope || document;
+    // Atto.find = function Atto_find(name, scope) {
+    //     var elements.
+    //         list = [],
+    //         len, i;
+    //     scope = scope || document;
+    //     if (attoMap.hasOwnProperty(name)) {
+    //         elements = scope.getElementsByClassName(
+    //             constants.ATTO_SELECTOR_CLASS_PREFIX + name
+    //         );
+    //         len = elements.length;
+    //         for (i = 0; i < len; i++) {
+    //             list.push(new Atto(undefined, null, ));
+    //         }
+    //     }
+    //     
+    //     console.log(elements);
+    // };
+    
+    Atto.get = function Atto_get(name) {
         if (attoMap.hasOwnProperty(name)) {
-            elements = scope.getElementsByClassName(constants.ATTO_SELECTOR_CLASS_PREFIX + name);
+            return attoMap[name];
+        }
+
+        return null;
+    };
+    
+    return Atto;
+}());
+
+var AttoNotification = (function AttoNotificationClosure() {
+    'use strict';
+    var notification = {};
+    function AttoNotification(notificationName, callBack, id, context) {
+        this.name = notificationName;
+        this.callBack = callBack || function () {};
+        this.id = id;
+        this.target = context;
+    }
+    
+    AttoNotification.prototype = {
+        execute: function AttoNotification_execute(mixin) {
+            this.callBack.apply(this.target, [mixin, this]);
         }
     };
 
-    return Atto;
+    AttoNotification.observer = function AttoNotification_observer(name, callBack, context) {
+        var notif, id;
+        
+        if (!notification.hasOwnProperty(name)) {
+            notification[name] = [];
+        }
+
+        if (!context.hasOwnProperty('notificationAtto')) {
+            context.notificationAtto = {};
+        }
+
+        notif = notification[name];
+        id = notif.length;
+        console.log(typeof context.notificationAtto[name]);
+        if (typeof context.notificationAtto[name] === 'undefined') {
+            notif.push(new AttoNotification(name, callBack, id, context));
+            context.notificationAtto[name] = id;
+            console.log('******');
+        }
+    }
+    AttoNotification.post = function AttoNotification_post(name, mixin) {
+        var list, len, i = 0;
+        if (notification.hasOwnProperty(name)) {
+            list = notification[name];
+        }
+        console.log(list);
+        len = list.length;
+        var interval = setInterval(function () {
+            if (i > len) {
+                clearInterval(interval);
+            }
+            if (typeof list[i] !== 'undefined') {
+                list[i].execute(mixin);
+                console.log(i);
+            } else {
+                clearInterval(interval);
+            }
+            i++;
+        }, 100);
+    };
+
+    return AttoNotification;
 }());
+
