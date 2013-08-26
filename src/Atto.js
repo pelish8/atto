@@ -14,7 +14,8 @@ var Atto = (function AttoClosure() {
         atto,
         constants = {
             ATTO_SELECTOR_CLASS_PREFIX: 'js-atto-selector-'
-        };
+        },
+        AttoNotification;
     
     function AttoException(message) {
         this.message = message;
@@ -28,13 +29,14 @@ var Atto = (function AttoClosure() {
     /***************************** private method *****************************/
     /**************************************************************************/
     function extend(obj1, obj2) {
-        var returnObject = {};
-        for (var prop in obj2) {
+        var returnObject = {},
+            prop;
+        for (prop in obj2) {
             if (obj2.hasOwnProperty(prop)) {
                 returnObject[prop] = obj2[prop];
             }
         }
-        for (var prop in obj1) {
+        for (prop in obj1) {
             if (obj1.hasOwnProperty(prop)) {
                 returnObject[prop] = obj1[prop];
             }
@@ -42,45 +44,41 @@ var Atto = (function AttoClosure() {
         return returnObject;
     }
     function renderAttoElement(render, renderInSection) {
+        var wrapper, len, i;
         if (renderInSection) {
-            var section = document.createElement('section');
-            if (typeof render === 'string') {
-                section.innerHTML = render.trim();
-            } else {
-                section.appendChild(render);
-            }
-            return section;
-        } else if (typeof render === 'string') {
-            var div = document.createElement('div'),
-                fragmet = document.createDocumentFragment();
-
-            div.innerHTML = render.trim();
-            while(div.firstChild) {
-                fragmet.appendChild(div.firstChild);
-            }
-
-            // flag to know it is a fragment
-            fragmet.isFragment = true;
-            return fragmet;
+            wrapper = document.createElement('section');
+        } else {
+            wrapper = document.createDocumentFragment();
+            wrapper.isFragment = true;
         }
-        return render;
+        if (toString.call(render) === '[object Array]') {
+            len = render.length;
+            for (i = 0; i < len; i++) {
+                wrapper.appendChild(render[i]);
+            }
+        } else if (typeof render === 'string') {
+            wrapper.innerHTML = render.trim();
+        } else {
+            wrapper.appendChild(render);
+        }
+        return wrapper;
     }
     function renderIntoElement(element) {
         var map = attoMap, elements,
             newElement = element.cloneNode(true),
             newElement1 = document.createDocumentFragment(),
-            attributes = newElement.attributes, 
-            i, len;
+            attributes = newElement.attributes,
+            i, len, name;
 
         newElement.innerHTML = element.innerHTML;
         element.innerHTML = '';
 
-        for (var name in map) {
+        for (name in map) {
             if (map.hasOwnProperty(name)) {
                 elements = newElement.getElementsByTagName(map[name].name);
                 while (0 < elements.length) {
                     new Atto({
-                        target: elements[0], 
+                        target: elements[0],
                         name: name,
                         renderInSection: true
                     }).render(true);
@@ -89,7 +87,7 @@ var Atto = (function AttoClosure() {
         }
 
         element.parentNode.replaceChild(newElement, element);
-    };
+    }
     
     /**************************************************************************/
     /****************************** constructor *******************************/
@@ -97,8 +95,12 @@ var Atto = (function AttoClosure() {
     function Atto(option) {
         //target, name, configObject, thisObj, customAttributes, renderInSection
         var config,
-            len, i, 
-            props = {}, attributes, target, customAttributes;
+            len,
+            i,
+            props = {},
+            attributes,
+            target,
+            customAttributes;
    
         config = option.config || attoMap[option.name] || {};
         target = option.target || [];
@@ -120,11 +122,11 @@ var Atto = (function AttoClosure() {
         
         this.mergeWith.call(props, customAttributes);
         this.props = props;
-        this.target = target
+        this.target = target;
         this.class = config.class;
         this.id = config.id;
         this.renderInSection = option.renderInSection;
-    };
+    }
 
     /**************************************************************************/
     /***************************** public method ******************************/
@@ -136,7 +138,8 @@ var Atto = (function AttoClosure() {
             var renderer = this.config.render.apply(this, [this.config, this]),
                 attributes = this.attributes,
                 activeElement,
-                element = renderAttoElement(renderer, this.renderInSection);
+                element = renderAttoElement(renderer, this.renderInSection),
+                att;
             if (typeof element === 'undefined') {
                 throw new AttoException(
                     'Render method must be implemented and should return value.'
@@ -146,18 +149,18 @@ var Atto = (function AttoClosure() {
                 activeElement = element.childNodes[0];
             } else {
                 activeElement = element;
-                for (var att in attributes) {
+                for (att in attributes) {
                     if (attributes.hasOwnProperty(att)) {
                         activeElement.setAttribute(att, attributes[att]);
                     }
                 }
             }
             activeElement.settingAtto = this.config;
-            activeElement.className += ' ' + (this.class || '') + 
-            (this.config.name ?
-                 ' ' + 
-                 constants.ATTO_SELECTOR_CLASS_PREFIX + this.config.name
-                 : '');
+            activeElement.className += ' ' + (this.class || '') +
+                (this.config.name ?
+                        ' ' +
+                        constants.ATTO_SELECTOR_CLASS_PREFIX + this.config.name
+                        : '');
             if (this.id) {
                 activeElement.id = this.id;
             }
@@ -199,7 +202,8 @@ var Atto = (function AttoClosure() {
             this.render(true);
         },
         mergeWith: function Atto_mergeWith(object) {
-            for (var prop in object) {
+            var prop;
+            for (prop in object) {
                 if (object.hasOwnProperty(prop) && prop !== 'render') {
                     this[prop] = object[prop];
                 }
@@ -212,33 +216,35 @@ var Atto = (function AttoClosure() {
     /**************************************************************************/
     Atto.define = function Atto_define(config) {
         if (config.hasOwnProperty('name')) {
-           if (config.hasOwnProperty('extend')) {
-               var ext = attoMap[config.extend];
-               if (!ext) {
-                   throw new AttoException(
-                       'Cannot extend, unknown component "' + config.extend + 
-                       '".'
-                   );
-               }
-               attoMap[config.name] = extend(config, ext);
-               attoMap[config.name].isExtend = true;
-           } else {
-               attoMap[config.name] = config;
-           }
+            if (config.hasOwnProperty('extend')) {
+                var ext = attoMap[config.extend];
+                if (!ext) {
+                    throw new AttoException(
+                        'Cannot extend, unknown component "' + config.extend +
+                            '".'
+                    );
+                }
+                attoMap[config.name] = extend(config, ext);
+                attoMap[config.name].isExtend = true;
+            } else {
+                attoMap[config.name] = config;
+            }
         } else {
-           throw new AttoException(
-               'Name configuration property must be defined.'
-           );
+            throw new AttoException(
+                'Name configuration property must be defined.'
+            );
         }
     };
     Atto.run = function Atto_run(settings) {
-        var elements, len, i;
+        var elements,
+            len,
+            i;
     
         settings = settings || {};
     
         if (settings.hasOwnProperty('target') &&
-            (elements = settings.target) &&
-            typeof elements.length === 'number') {
+                (elements = settings.target) &&
+                typeof elements.length === 'number') {
             len = elements.length;
             for (i = 0; i < len; i++) {
                 renderIntoElement(elements[i]);
@@ -251,7 +257,7 @@ var Atto = (function AttoClosure() {
     Atto.create = function Atto_create(config) {
         if (typeof config === 'object') {
             return new Atto({
-                config: config, 
+                config: config,
                 renderInSection: false
             });
         }
@@ -262,7 +268,9 @@ var Atto = (function AttoClosure() {
     Atto.find = function Atto_find(name, scope) {
         var elements,
             list = [],
-            len, i, el;
+            len,
+            i,
+            el;
         scope = scope || document;
         if (attoMap.hasOwnProperty(name)) {
             elements = scope.getElementsByClassName(
@@ -274,7 +282,7 @@ var Atto = (function AttoClosure() {
                 list.push(new Atto({target: el,
                     name: el.settingAtto.name,
                     config: el.settingAtto
-                }));
+                    }));
             }
             
             return list;
@@ -295,64 +303,65 @@ var Atto = (function AttoClosure() {
         // throw error
         return null;
     };
+    
+    AttoNotification = (function AttoNotificationClosure() {
+        var notification = {};
+        function AttoNotification(notificationName, callBack, id, context) {
+            this.name = notificationName;
+            this.callBack = callBack || function () {};
+            this.id = id;
+            this.target = context;
+        }
+    
+        AttoNotification.prototype = {
+            execute: function AttoNotification_execute(mixin) {
+                this.callBack.apply(this.target, [mixin, this]);
+            }
+        };
+
+        AttoNotification.observer = function AttoNotification_observer(name, callBack, context) {
+            var notif, id;
+        
+            if (!notification.hasOwnProperty(name)) {
+                notification[name] = [];
+            }
+
+            if (!context.hasOwnProperty('notifications')) {
+                context.notifications = {};
+            }
+
+            notif = notification[name];
+            id = notif.length;
+        
+            if (typeof context.notifications[name] === 'undefined') {
+                notif.push(new AttoNotification(name, callBack, id, context));
+                context.notifications[name] = id;
+            }
+        };
+        AttoNotification.post = function AttoNotification_post(name, mixin) {
+            var list,
+                len,
+                i = 0,
+                interval;
+            if (notification.hasOwnProperty(name)) {
+                list = notification[name];
+            }
+            len = list.length;
+            interval = setInterval(function () {
+                if (i > len) {
+                    clearInterval(interval);
+                }
+                if (typeof list[i] !== 'undefined') {
+                    list[i].execute(mixin);
+                } else {
+                    clearInterval(interval);
+                }
+                i++;
+            }, 10);
+        };
+
+        return AttoNotification;
+    }());
 
     return Atto;
 }());
-
-var AttoNotification = (function AttoNotificationClosure() {
-    'use strict';
-    var notification = {};
-    function AttoNotification(notificationName, callBack, id, context) {
-        this.name = notificationName;
-        this.callBack = callBack || function () {};
-        this.id = id;
-        this.target = context;
-    }
-    
-    AttoNotification.prototype = {
-        execute: function AttoNotification_execute(mixin) {
-            this.callBack.apply(this.target, [mixin, this]);
-        }
-    };
-
-    AttoNotification.observer = function AttoNotification_observer(name, callBack, context) {
-        var notif, id;
-        
-        if (!notification.hasOwnProperty(name)) {
-            notification[name] = [];
-        }
-
-        if (!context.hasOwnProperty('notifications')) {
-            context.notifications = {};
-        }
-
-        notif = notification[name];
-        id = notif.length;
-        
-        if (typeof context.notifications[name] === 'undefined') {
-            notif.push(new AttoNotification(name, callBack, id, context));
-            context.notifications[name] = id;
-        }
-    }
-    AttoNotification.post = function AttoNotification_post(name, mixin) {
-        var list, len, i = 0;
-        if (notification.hasOwnProperty(name)) {
-            list = notification[name];
-        }
-        len = list.length;
-        var interval = setInterval(function () {
-            if (i > len) {
-                clearInterval(interval);
-            }
-            if (typeof list[i] !== 'undefined') {
-                list[i].execute(mixin);
-            } else {
-                clearInterval(interval);
-            }
-            i++;
-        }, 10);
-    };
-
-    return AttoNotification;
-}());
-
