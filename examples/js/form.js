@@ -1,7 +1,7 @@
 (function (A, create) {
     A.define({
         name: 'test-form',
-        class: 'test-from',
+        cls: 'test-from',
         render: function (config) {
             var form = document.createElement('form');
             var input, button; 
@@ -22,5 +22,10 @@
             form.appendChild(button);
             return form;
         }
+    });
+
+    A.define({
+        name: 'form-test',
+        extend: 'test-form'
     });
 })(Atto, document.createElement);

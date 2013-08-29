@@ -7,10 +7,22 @@
     </head>
     <body>
         <div class="name js-name"></div>
-        <test-form></test-form>
-    </body>
+        <div class="js-atto-target">
+            <test-form data-start="0" data-end="30"></test-form>
+            <form-test data-start="0" data-end="30"></form-test>
+        </div>
+    </body> 
     <script>
-        Atto.run();
+    var start = new Date().getTime();
+        Atto.run({
+            target: document.getElementsByClassName('js-atto-target')
+        });
+        var e = Atto.get('test-form');//Atto.create('test-form', {'data-start': 10, 'data-end': 20}, true).render();
+        e[0].setAttribute('data-start', 10);
+        e[0].removeAttribute('data-end', 40);
+        e[0].rerender();
+        console.log((new Date().getTime() - start) + ' ms');
+        
         qs = document.location.search.split("+").join(" ");
 
         var params = {},
@@ -29,5 +41,6 @@
         }
         
         document.getElementsByClassName('js-name')[0].innerHTML = name;
+        // document.body.appendChild(e);
     </script>
 </html>
