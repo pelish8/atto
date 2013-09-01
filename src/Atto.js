@@ -118,7 +118,7 @@ var Atto = (function () {
         config = option.config || attoMap[option.name] || {};
         target = option.target || [];
         customAttributes = option.attributes || {};
-
+        
         if (!config.isExtened && config.hasOwnProperty('extend')) {
             this.parent = attoMap[config.extend];
             this.config = extend(config, this.parent);
@@ -135,6 +135,7 @@ var Atto = (function () {
         }
         this.mergeWith(this.config);
         
+        this.events = config.events || [];
         this.mergeWith.call(props, customAttributes);
         this.props = props;
         this.target = target;
@@ -153,7 +154,8 @@ var Atto = (function () {
             var renderer = this.config.render.apply(this, [this.config, this]),
                 attributes = this.attributes,
                 activeElement,
-                element = renderAttoElement.apply(this, [renderer, this.renderInSection]);
+                element = renderAttoElement.apply(this, [renderer, this.renderInSection]),
+                render;
 
             if (typeof element === 'undefined') {
                 throw new AttoException(
@@ -185,11 +187,13 @@ var Atto = (function () {
             if (inDom) {
                 this.insert();
             }
-            return activeElement;
+            render = activeElement;
+            this.trigger('render');
+            return render;
         },
-        
         insert: function Atto_insert() {
             this.target.parentNode.replaceChild(this.element, this.target);
+            this.trigger('insert');
         },
         setAttribute: function Atto_setattribute(name, value) {
             this.props[name] = value;
@@ -222,6 +226,11 @@ var Atto = (function () {
                 if (object.hasOwnProperty(prop) && prop !== 'render') {
                     this[prop] = object[prop];
                 }
+            }
+        },
+        trigger: function Atto_trigger(event) {
+            if (this.events[event]) {
+                this.events[event].call(this, this);
             }
         }
     };
